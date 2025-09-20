@@ -13,3 +13,7 @@ psql -h localhost -U postgres -d stackoverflow_db -f postlinks_inserts.sql > log
 
 # 4. Tabela que depende de Users
 psql -h localhost -U postgres -d stackoverflow_db -f badges_inserts.sql > log_importacao.txt 2>&1
+
+
+# Atualiza constraints depois de adicionar todos os dados
+# psql -h localhost -U postgres -d stackoverflow_db -f alter-table-schemas.sql

@@ -1,98 +1,51 @@
--- Adiciona chaves estrangeiras e índices para otimizações
+-- Para acelerar a busca de respostas para uma pergunta (JOIN em si mesmo)
+CREATE INDEX idx_posts_parentid ON Posts (ParentId);
 
--- =============================================
--- Tabela: Posts
--- =============================================
-BEGIN;
--- Relações:
--- ParentId se refere a outro Post (Pergunta -> Resposta)
-ALTER TABLE posts ADD CONSTRAINT fk_posts_parent_id FOREIGN KEY (parentid) REFERENCES posts(id);
--- AcceptedAnswerId se refere a outro Post (Pergunta -> Resposta Aceita)
-ALTER TABLE posts ADD CONSTRAINT fk_posts_accepted_answer_id FOREIGN KEY (acceptedanswerid) REFERENCES posts(id);
--- OwnerUserId se refere a um Usuário
-ALTER TABLE posts ADD CONSTRAINT fk_posts_owner_user_id FOREIGN KEY (owneruserid) REFERENCES users(id);
--- LastEditorUserId se refere a um Usuário
-ALTER TABLE posts ADD CONSTRAINT fk_posts_last_editor_user_id FOREIGN KEY (lasteditoruserid) REFERENCES users(id);
+-- Para acelerar buscas por tipo de post (ex: WHERE PostTypeId = 1 para perguntas)
+CREATE INDEX idx_posts_posttypeid ON Posts (PostTypeId);
 
--- Índices para performance:
-CREATE INDEX idx_posts_parent_id ON posts(parentid);
-CREATE INDEX idx_posts_accepted_answer_id ON posts(acceptedanswerid);
-CREATE INDEX idx_posts_owner_user_id ON posts(owneruserid);
-CREATE INDEX idx_posts_last_editor_user_id ON posts(lasteditoruserid);
-COMMIT;
+-- Para acelerar JOINs com a tabela Users
+CREATE INDEX idx_posts_owneruserid ON Posts (OwnerUserId);
 
--- =============================================
--- Tabela: Comments
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE comments ADD CONSTRAINT fk_comments_post_id FOREIGN KEY (postid) REFERENCES posts(id);
-ALTER TABLE comments ADD CONSTRAINT fk_comments_user_id FOREIGN KEY (userid) REFERENCES users(id);
+-- Para buscas e ordenação por data
+CREATE INDEX idx_posts_creationdate ON Posts (CreationDate);
+CREATE INDEX idx_posts_lastactivitydate ON Posts (LastActivityDate);
 
--- Índices para performance:
-CREATE INDEX idx_comments_post_id ON comments(postid);
-CREATE INDEX idx_comments_user_id ON comments(userid);
-COMMIT;
+-- Essencial para buscar comentários de um post específico
+CREATE INDEX idx_comments_postid ON Comments (PostId);
 
--- =============================================
--- Tabela: Votes
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE votes ADD CONSTRAINT fk_votes_post_id FOREIGN KEY (postid) REFERENCES posts(id);
-ALTER TABLE votes ADD CONSTRAINT fk_votes_user_id FOREIGN KEY (userid) REFERENCES users(id);
+-- Para buscar todos os comentários de um usuário
+CREATE INDEX idx_comments_userid ON Comments (UserId);
 
--- Índices para performance:
-CREATE INDEX idx_votes_post_id ON votes(postid);
-CREATE INDEX idx_votes_user_id ON votes(userid);
-COMMIT;
+-- Essencial para buscar as medalhas de um usuário
+CREATE INDEX idx_badges_userid ON Badges (UserId);
 
--- =============================================
--- Tabela: Badges
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE badges ADD CONSTRAINT fk_badges_user_id FOREIGN KEY (userid) REFERENCES users(id);
+-- Para buscar todo o histórico de um post
+CREATE INDEX idx_posthistory_postid ON PostHistory (PostId);
 
--- Índices para performance:
-CREATE INDEX idx_badges_user_id ON badges(userid);
-COMMIT;
+-- Para buscar todas as edições feitas por um usuário
+CREATE INDEX idx_posthistory_userid ON PostHistory (UserId);
 
--- =============================================
--- Tabela: PostHistory
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE posthistory ADD CONSTRAINT fk_posthistory_post_id FOREIGN KEY (postid) REFERENCES posts(id);
-ALTER TABLE posthistory ADD CONSTRAINT fk_posthistory_user_id FOREIGN KEY (userid) REFERENCES users(id);
+-- Para encontrar posts relacionados a partir de um PostId
+CREATE INDEX idx_postlinks_postid ON PostLinks (PostId);
 
--- Índices para performance:
-CREATE INDEX idx_posthistory_post_id ON posthistory(postid);
-CREATE INDEX idx_posthistory_user_id ON posthistory(userid);
-COMMIT;
+-- Para encontrar posts que se relacionam com um RelatedPostId
+CREATE INDEX idx_postlinks_relatedpostid ON PostLinks (RelatedPostId);
 
--- =============================================
--- Tabela: PostLinks
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE postlinks ADD CONSTRAINT fk_postlinks_post_id FOREIGN KEY (postid) REFERENCES posts(id);
-ALTER TABLE postlinks ADD CONSTRAINT fk_postlinks_related_post_id FOREIGN KEY (relatedpostid) REFERENCES posts(id);
+-- Essencial para a consulta "quais posts têm a tag X?"
+CREATE INDEX idx_posttags_tagid_postid ON PostTags (TagId, PostId);
 
--- Índices para performance:
-CREATE INDEX idx_postlinks_post_id ON postlinks(postid);
-CREATE INDEX idx_postlinks_related_post_id ON postlinks(relatedpostid);
-COMMIT;
+-- Para acelerar a busca de uma tag pelo nome (ex: WHERE TagName = 'python')
+CREATE INDEX idx_tags_tagname ON Tags (TagName);
 
--- =============================================
--- Tabela: Tags
--- =============================================
-BEGIN;
--- Relações:
-ALTER TABLE tags ADD CONSTRAINT fk_tags_excerpt_post_id FOREIGN KEY (excerptpostid) REFERENCES posts(id);
-ALTER TABLE tags ADD CONSTRAINT fk_tags_wiki_post_id FOREIGN KEY (wikipostid) REFERENCES posts(id);
+-- Essencial para contar os votos de um post
+CREATE INDEX idx_votes_postid ON Votes (PostId);
 
--- Índices para performance:
-CREATE INDEX idx_tags_excerpt_post_id ON tags(excerptpostid);
-CREATE INDEX idx_tags_wiki_post_id ON tags(wikipostid);
-COMMIT;
+-- Para encontrar os votos de um usuário específico
+CREATE INDEX idx_votes_userid ON Votes (UserId);
+
+-- Para encontrar edições sugeridas para um post
+CREATE INDEX idx_suggestededits_postid ON SuggestedEdits (PostId);
+
+-- Para encontrar edições sugeridas por um usuário
+CREATE INDEX idx_suggestededits_owneruserid ON SuggestedEdits (OwnerUserId);

@@ -75,6 +75,13 @@ SCHEMA = {
             ('Id', 'int'), ('UserId', 'int'), ('Name', 'varchar'),
             ('Date', 'timestamp'), ('Class', 'smallint'), ('TagBased', 'boolean')
         ]
+    },
+    'filtered_PostTags.xml': {
+        'table_name': 'posttags',
+        'columns': [
+            ('PostId', 'int'),
+            ('TagId', 'int')
+        ]
     }
 }
 
@@ -146,6 +153,7 @@ if __name__ == '__main__':
         'filtered_Users.xml',
         'filtered_Tags.xml',
         'filtered_Posts.xml',
+        'filtered_PostTags.xml', 
         'filtered_Comments.xml',
         'filtered_Votes.xml',
         'filtered_PostHistory.xml',

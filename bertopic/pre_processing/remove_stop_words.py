@@ -18,6 +18,8 @@ stop_words = set(stopwords.words("english"))
 
 stop_words.update(STOPWORD_SETS[TAG])
 
+print(STOPWORD_SETS[TAG])
+
 def remove_stopwords(text):
     if pd.isna(text):
         return ""

@@ -7,6 +7,7 @@ from collections import defaultdict
 GENERAL_STOPWORDS = {
     # Meta-linguagem do SO
     "hello", "hi", "thanks", "thank", "please", "help", 
+    "question", "problem", "issue", "answer", "example"
     #"question", "problem", "issue", "answer", "example", "solution", # verificar resultados do bertopic (se polui)
     "anyone", "something", "anything", "however", "every",
     "follow", "following", # ex: "following code", "following error"
@@ -18,7 +19,7 @@ GENERAL_STOPWORDS = {
     "create", "creating", "understand",
     
     # Jargao genérico de programação
-    # "code", "error", "file", "data",  # verificar resultados do bertopic (se polui)
+    "code", "function", "data",  # verificar resultados do bertopic (se polui)
     "im", "ive", "id", "its", "it", "is", "im", # contrações comuns
     "sure", "simple", "another", "new", "different", "able", "unable",
      "way", "also", "one", "two"
@@ -51,13 +52,18 @@ TAG_SPECIFIC_STOPWORDS = {
 # Combina as palavras gerais com as especificas de cada tag
 # --------------------------------------------------------------------------
 
-# Cria um defaultdict. Se a TAG nao for encontrada, ele retorna 
-# o conjunto GERAL por padrao, o que evita erros.
-STOPWORD_SETS = defaultdict(lambda: GENERAL_STOPWORDS)
+# # Cria um defaultdict. Se a TAG nao for encontrada, ele retorna 
+# # o conjunto GERAL por padrao, o que evita erros.
+# STOPWORD_SETS = defaultdict(lambda: GENERAL_STOPWORDS)
 
-# Itera sobre as tags especificas e cria o conjunto final para cada uma
+# # Itera sobre as tags especificas e cria o conjunto final para cada uma
+# for tag, specific_set in TAG_SPECIFIC_STOPWORDS.items():
+#     # .union() combina os dois conjuntos
+#     STOPWORD_SETS[tag] = GENERAL_STOPWORDS.union(specific_set)
+
+# STOPWORD_SETS["general"] = GENERAL_STOPWORDS
+
+STOPWORD_SETS = {}
+
 for tag, specific_set in TAG_SPECIFIC_STOPWORDS.items():
-    # .union() combina os dois conjuntos
-    STOPWORD_SETS[tag] = GENERAL_STOPWORDS.union(specific_set)
-
-STOPWORD_SETS["general"] = GENERAL_STOPWORDS
+    STOPWORD_SETS[tag] = specific_set

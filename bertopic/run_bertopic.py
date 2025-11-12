@@ -11,11 +11,14 @@ from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from pre_processing.custom_stopwords import STOPWORD_SETS
 
-TAG = "julia"
-MIN_CLUSTER_SIZE = 100
+TAG = "c#"
+MIN_CLUSTER_SIZE = 75
+N_NEIGHBORS = 15
+
+NR_TOPICS = 10
 
 INPUT_CSV_PATH = f"../../{TAG}-no-code.csv"
-TEXT_COLUMN = "cleanbodynostop"
+TEXT_COLUMN = "cleanbody"
 DATE_COLUMN = "lastactivitydate"
 YEAR_COLUMN = "ano"
 
@@ -26,6 +29,7 @@ OUTPUT_PROBS_PATH = f"../../{TAG}-topic_probabilities.csv"
 # Para abrir no navegador
 pio.renderers.default = "browser"
 
+print(f"Tag: {TAG}")
 print(f"Carregando dados pre-processados de: {INPUT_CSV_PATH}")
 try:
     df = pd.read_csv(INPUT_CSV_PATH)
@@ -62,7 +66,7 @@ print("Embeddings calculados.")
 # Definir Modelos de Componentes para Reprodutibilidade e Qualidade
 # UMAP (Redução de Dimensionalidade)
 # random_state=42 garante que os resultados sejam sempre os mesmos
-umap_model = UMAP(n_neighbors=15,
+umap_model = UMAP(n_neighbors=N_NEIGHBORS,
                   n_components=5,
                   min_dist=0.0,
                   metric='cosine',
@@ -75,7 +79,7 @@ hdbscan_model = HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE,
                         cluster_selection_method='eom',
                         prediction_data=True)
 
-custom_stop_words = set(ENGLISH_STOP_WORDS).union(STOPWORD_SETS[TAG])
+custom_stop_words = list(set(ENGLISH_STOP_WORDS).union(STOPWORD_SETS[TAG]))
 
 # CountVectorizer (Nomes dos Topicos)
 # min_df=2 ignora palavras que aparecem em menos de 2 documentos
@@ -99,6 +103,8 @@ topic_model = BERTopic(
     hdbscan_model=hdbscan_model, 
     vectorizer_model=vectorizer_model, 
     representation_model=representation_model,
+    
+    nr_topics=NR_TOPICS,
 
     # Hiperparâmetros
     top_n_words=10,

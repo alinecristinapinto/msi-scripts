@@ -1,8 +1,8 @@
 import os 
-import pandas as pd
+
 from bertopic import BERTopic
 
-TAG = "r" 
+TAG = "python" 
 
 BASE_DIR = "../../" 
 MODEL_PATH = f"{BASE_DIR}models/{TAG}_model"

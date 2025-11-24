@@ -1,5 +1,6 @@
 import pandas as pd
 from bertopic import BERTopic
+from bertopic.vectorizers import ClassTfidfTransformer 
 import plotly.io as pio
 import os 
 
@@ -14,13 +15,14 @@ from pre_processing.custom_stopwords import BOILERPLATE_WORDS, GENERIC_TECH_WORD
 
 TAG = "python" 
 
-MIN_CLUSTER_SIZE = 75 
+MIN_CLUSTER_SIZE = 40 
+
 N_NEIGHBORS = 15
 NR_TOPICS = 10
 
 BASE_DIR = "../../" 
 INPUT_CSV_PATH = f"{BASE_DIR}{TAG}-no-code.csv"  
-OUTPUT_MODEL_DIR = f"{BASE_DIR}models/{TAG}_model" 
+OUTPUT_MODEL_DIR = f"{BASE_DIR}models/{TAG}_model_no_outlier_reduction"
 
 os.makedirs(os.path.dirname(OUTPUT_MODEL_DIR), exist_ok=True)
 
@@ -55,15 +57,12 @@ years = df[YEAR_COLUMN].tolist()
 
 print(f"Total de {len(docs)} documentos prontos.")
 
-# --- MODELAGEM ---
-
 print("Calculando embeddings...")
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 embeddings = embedding_model.encode(docs, show_progress_bar=True)
 
-umap_model = UMAP(n_neighbors=N_NEIGHBORS, n_components=10, min_dist=0.0, metric='cosine', random_state=42)
+umap_model = UMAP(n_neighbors=N_NEIGHBORS, n_components=5, min_dist=0.0, metric='cosine', random_state=42)
 
-# min_samples baixo ajuda a recuperar pontos que seriam descartados como ruído (-1)
 hdbscan_model = HDBSCAN(
     min_cluster_size=MIN_CLUSTER_SIZE, 
     min_samples=5, 
@@ -73,14 +72,28 @@ hdbscan_model = HDBSCAN(
 )
 
 current_tag_specific = TAG_SPECIFIC_STOPWORDS.get(TAG, set())
-# custom_stop_words = list(set(ENGLISH_STOP_WORDS).union(BOILERPLATE_WORDS).union(current_tag_specific))
 custom_stop_words = list(set(ENGLISH_STOP_WORDS)
-                         .union(BOILERPLATE_WORDS)
-                         .union(GENERIC_TECH_WORDS) 
-                         .union(current_tag_specific))
+                          .union(BOILERPLATE_WORDS)
+                          .union(GENERIC_TECH_WORDS) 
+                          .union(current_tag_specific))
 
-vectorizer_model = CountVectorizer(min_df=2, ngram_range=(1, 2), stop_words=custom_stop_words)
-representation_model = {"KeyBERT": KeyBERTInspired(), "MMR": MaximalMarginalRelevance(diversity=0.3)}
+vectorizer_model = CountVectorizer(
+    min_df=5, 
+    max_df=0.95, 
+    ngram_range=(1, 2), 
+    stop_words=custom_stop_words
+)
+
+ctfidf_model = ClassTfidfTransformer(reduce_frequent_words=True)
+
+keybert_model = KeyBERTInspired()
+mmr_model = MaximalMarginalRelevance(diversity=0.3)
+
+representation_model = {
+    "Main": keybert_model, 
+    "KeyBERT": keybert_model,
+    "MMR": mmr_model
+}
 
 print("Treinando BERTopic...")
 topic_model = BERTopic(
@@ -88,8 +101,8 @@ topic_model = BERTopic(
     umap_model=umap_model,
     hdbscan_model=hdbscan_model, 
     vectorizer_model=vectorizer_model, 
+    ctfidf_model=ctfidf_model,
     representation_model=representation_model,
-    nr_topics=NR_TOPICS,
     top_n_words=10,
     calculate_probabilities=True, 
     verbose=True
@@ -97,19 +110,42 @@ topic_model = BERTopic(
 
 topics, probs = topic_model.fit_transform(docs, embeddings=embeddings)
 
-print(f"Salvando o modelo completo em: {OUTPUT_MODEL_DIR}")
-topic_model.save(OUTPUT_MODEL_DIR, serialization="safetensors", save_ctfidf=True, save_embedding_model="all-MiniLM-L6-v2")
-print("Modelo salvo! Para carregar depois use: topic_model = BERTopic.load(path)")
-
-# --- POS-PROCESSAMENTO ---
-
 if probs is not None:
     print("Salvando probabilidades...")
     df_probs = pd.DataFrame(probs)
-    topic_ids = sorted(topic_model.get_topics().keys())
-    if df_probs.shape[1] == len(topic_ids):
-        df_probs.columns = [f"prob_topic_{tid}" for tid in topic_ids]
-    df_probs.to_csv(OUTPUT_PROBS_PATH, index=False)
+    
+    try:
+        current_topic_ids = sorted(list(set(topics)))
+        # Removemos o -1 da lista de colunas de probabilidade se ele existir,
+        # pois o BERTopic geralmente retorna probs apenas para os clusters formados (não para o ruído)
+        if -1 in current_topic_ids: current_topic_ids.remove(-1)
+        
+        if df_probs.shape[1] == len(current_topic_ids):
+            df_probs.columns = [f"prob_topic_{tid}" for tid in current_topic_ids]
+        else:
+            df_probs.columns = [f"prob_col_{i}" for i in range(df_probs.shape[1])]
+            
+        df_probs.to_csv(OUTPUT_PROBS_PATH, index=False)
+    except Exception as e:
+        print(f"Aviso: Não foi possível salvar nomes exatos das colunas ({e}). Salvando cru.")
+        pd.DataFrame(probs).to_csv(OUTPUT_PROBS_PATH, index=False)
+
+# --- REDUÇÃO FINAL PARA 10 TÓPICOS ---
+print(f"Reduzindo de {len(set(topics))} para {NR_TOPICS} tópicos principais...")
+topic_model.reduce_topics(docs, nr_topics=NR_TOPICS)
+
+print("Reaplicando configurações de limpeza e KeyBERT nos tópicos reduzidos...")
+topic_model.update_topics(
+    docs, 
+    vectorizer_model=vectorizer_model, 
+    ctfidf_model=ctfidf_model, 
+    representation_model=representation_model
+)
+
+topics = topic_model.topics_
+
+print(f"Salvando o modelo completo em: {OUTPUT_MODEL_DIR}")
+topic_model.save(OUTPUT_MODEL_DIR, serialization="safetensors", save_ctfidf=True, save_embedding_model="all-MiniLM-L6-v2")
 
 print("Gerando Topics Over Time...")
 topics_over_time = topic_model.topics_over_time(docs=docs, timestamps=years, global_tuning=True, evolution_tuning=True)
@@ -118,5 +154,8 @@ topics_over_time.to_csv(OUTPUT_TOT_CSV_PATH, index=False)
 topics_to_visualize = [t for t in topics_over_time.Topic.unique() if t != -1]
 fig = topic_model.visualize_topics_over_time(topics_over_time, topics=topics_to_visualize)
 fig.write_html(OUTPUT_TOT_HTML_PATH)
+
+print("\n--- TÓPICOS FINAIS ---")
+print(topic_model.get_topic_info().head(11))
 
 print("Concluído.")

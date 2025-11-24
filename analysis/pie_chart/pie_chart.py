@@ -37,7 +37,6 @@ def plot_pie_group(df_group: pd.DataFrame, group_name: str, out_png: Path):
     values = summary["total_q_a"]
     colors = [tag_colors.get(tag, "#999999") for tag in labels]
 
-    # função de label detalhada
     def make_autopct(q_vals, a_vals):
         total_all = (q_vals + a_vals).sum()
         def _autopct(pct):
@@ -64,11 +63,11 @@ def plot_pie_group(df_group: pd.DataFrame, group_name: str, out_png: Path):
     plt.tight_layout()
     plt.savefig(out_png, dpi=160)
     plt.close()
-    print(f"✅ Gráfico salvo: {out_png}")
+    print(f"Gráfico salvo: {out_png}")
 
 for group_name in ["alto_recurso", "baixo_moderado"]:
     df_group = df[df["group_name"] == group_name]
-    out_path = OUT_DIR / f"pie_{group_name}_detalhado.png"
+    out_path = OUT_DIR / f"pie_{group_name}.png"
     plot_pie_group(df_group, group_name, out_path)
 
-print("✅ Finalizado! Gráficos de pizza detalhados gerados.")
+print("Finalizado")

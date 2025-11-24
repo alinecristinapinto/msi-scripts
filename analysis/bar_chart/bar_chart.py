@@ -3,19 +3,18 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 CSV_PATH = "../post-sums-query.csv" 
-OUT_PATH = Path("comparativo_grupos.png")
+OUT_PATH = Path("compare_groups.png")
 
 df = pd.read_csv(CSV_PATH)
 df["month_start"] = pd.to_datetime(df["month_start"])
 
-# soma todas as perguntas e respostas do período inteiro
+# soma todas as perguntas e respostas do periodo inteiro
 agg = (
     df.groupby("group_name")[["questions", "answers", "total_q_a"]]
     .sum()
     .reset_index()
 )
 
-# Renomear para algo mais bonito no gráfico
 agg["group_name"] = agg["group_name"].replace({
     "alto_recurso": "Alto Recurso",
     "baixo_moderado": "Moderado Recurso"
@@ -40,6 +39,6 @@ plt.tight_layout()
 plt.savefig(OUT_PATH, dpi=160)
 plt.show()
 
-print(f"✅ Gráfico salvo em {OUT_PATH}")
+print(f"Gráfico salvo em {OUT_PATH}")
 
 

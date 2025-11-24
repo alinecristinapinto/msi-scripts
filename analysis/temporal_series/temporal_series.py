@@ -2,8 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# ===== Config =====
 CSV_PATH = "../post-sums-query.csv"  
+
 OUT_DIR = Path("./")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -22,9 +22,6 @@ df = pd.read_csv(CSV_PATH)
 df["month_start"] = pd.to_datetime(df["month_start"])
 
 def plot_group_total(df_group: pd.DataFrame, group_name: str, out_png: Path):
-    """
-    Plota a soma total (Perguntas + Respostas) do grupo inteiro ao longo do tempo.
-    """
     monthly = (
         df_group.groupby("month_start")[["questions", "answers", "total_q_a"]]
         .sum()
@@ -44,12 +41,9 @@ def plot_group_total(df_group: pd.DataFrame, group_name: str, out_png: Path):
     plt.tight_layout()
     plt.savefig(out_png, dpi=160)
     plt.close()
-    print(f"✅ Gráfico salvo: {out_png}")
+    print(f"Gráfico salvo: {out_png}")
 
 def plot_group_metric(df_group: pd.DataFrame, metric: str, title: str, out_png: Path):
-    """
-    Plota um gráfico de linhas do 'metric' (questions | answers) por tag ao longo do tempo.
-    """
     pivot = df_group.pivot(index="month_start", columns="tagname", values=metric).fillna(0)
 
     plt.figure(figsize=(10, 6))
@@ -84,11 +78,9 @@ for group in ["alto_recurso", "baixo_moderado"]:
         OUT_DIR / f"timeline_{group}_respostas.png",
     )
 
-print("✅ Finalizado: 4 gráficos gerados (perguntas e respostas para cada grupo).")
-
 for group_name in ["alto_recurso", "baixo_moderado"]:
     df_group = df[df["group_name"] == group_name]
     out_path = OUT_DIR / f"timeline_{group_name}_total.png"
     plot_group_total(df_group, group_name, out_path)
 
-print("✅ Finalizado! Gráficos totais por grupo gerados.")
+print("Finalizado! Gráficos totais por grupo gerados.")
